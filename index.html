@@ -681,8 +681,8 @@ function renderFest(){
 }
 
 /* ---------- data (Supabase) ---------- */
-const SUPABASE_URL='__SUPABASE_URL__';
-const SUPABASE_KEY='__SUPABASE_KEY__';
+const SUPABASE_URL='https://ervttlneimqjbyyzwoef.supabase.co';
+const SUPABASE_KEY='sb_publishable_L37v_9GQ4YhI9RnhTf06KQ_XNf-aCWb';
 const ERRS={codigo_invalido:'El código del equipo no es correcto.',persona_invalida:'Elige una persona del equipo.',cubre_invalido:'Elige a alguien del equipo para cubrir.',tipo_invalido:'Ese tipo de ausencia no se puede solicitar aquí.',referencia_invalida:'Esas vacaciones ya no existen; recarga la página.',fechas_invalidas:'Revisa las fechas (máximo 120 días por solicitud).',demasiadas_pendientes:'Hay demasiadas solicitudes pendientes de esa persona; espera a que se revisen.'};
 function errMsg(e,fallback){const m=(e&&(e.message||e.error_description))||'';for(const k in ERRS)if(m.includes(k))return ERRS[k];if(/Failed to fetch|NetworkError|network|Load failed/i.test(m))return'Sin conexión con la base de datos. Revisa tu red e intenta de nuevo.';return fallback}
 const nowIso=()=>new Date().toISOString();

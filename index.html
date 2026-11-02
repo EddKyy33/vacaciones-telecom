@@ -426,6 +426,14 @@ button.link:hover{text-decoration:underline}
     <div class="btns"><input type="date" id="festNew" style="max-width:200px"><button id="festAdd">Agregar festivo</button></div>
   </section>
 
+  <section class="panel" id="accessPanel" hidden>
+    <div class="panel-head"><h2>Código del equipo</h2><span class="muted small">Es lo que tu equipo escribe para entrar. Si lo cambias, tendrán que usar el nuevo.</span></div>
+    <form class="btns" id="codeForm" autocomplete="off">
+      <input id="newCode" placeholder="Nuevo código (mínimo 6 caracteres)" autocomplete="off" autocapitalize="none" spellcheck="false" style="max-width:300px">
+      <button type="submit" class="primary" id="codeSave">Guardar código</button>
+    </form>
+  </section>
+
   <footer class="foot">
     <span id="footRole" class="muted small"></span>
     <span class="foot-actions">
@@ -450,12 +458,14 @@ button.link:hover{text-decoration:underline}
 
 <div class="modal" id="loginModal" hidden>
   <form class="gate-card" id="loginForm">
-    <h3>Acceso del aprobador</h3>
-    <p class="muted small" style="margin:0">Solo para aprobar, editar ausencias y administrar festivos.</p>
+    <h3 id="lgTitle">Acceso del aprobador</h3>
+    <p class="muted small" style="margin:0" id="lgHint">Solo para aprobar, editar ausencias y administrar festivos.</p>
     <label>Correo<input type="email" id="lgEmail" autocomplete="username" required></label>
     <label>Contraseña<input type="password" id="lgPass" autocomplete="current-password" required></label>
+    <label id="lgPass2Wrap" hidden>Confirma la contraseña<input type="password" id="lgPass2" autocomplete="new-password"></label>
     <div class="gate-err" id="loginErr" role="alert"></div>
     <div class="btns"><button type="submit" class="primary" id="lgBtn">Entrar</button><button type="button" id="lgCancel">Cancelar</button></div>
+    <button type="button" class="link" id="lgMode">¿Primera vez? Crea tu contraseña</button>
   </form>
 </div>
 
@@ -467,7 +477,7 @@ const APROBADOR='Edgar Iván Sánchez';
 const TIPOS={vac:{n:'Vacaciones',c:'1',cls:'t-vac'},cum:{n:'Cumpleaños',c:'C',cls:'t-cum'},inc:{n:'Incapacidad',c:'In',cls:'t-inc'},sus:{n:'Suspendido',c:'S',cls:'t-sus'}};
 const DEFAULT_TEAM=[{key:'edgar',nombre:'Edgar Iván Sánchez Tinoco'},{key:'erick',nombre:'Erick Márquez Bazaldua'},{key:'rodrigo',nombre:'Rodrigo Robles Mendoza'},{key:'jesus',nombre:'Jesús Delgado Nava'}];
 
-const S={sb:null,owner:false,code:'',email:'',team:DEFAULT_TEAM,fest:new Set(),apr:[],sol:[],y:0,m:0,sel:null,edit:null,loaded:new Set(),animate:null,lastGrid:''};
+const S={sb:null,owner:false,code:'',email:'',signup:false,team:DEFAULT_TEAM,fest:new Set(),apr:[],sol:[],y:0,m:0,sel:null,edit:null,loaded:new Set(),animate:null,lastGrid:''};
 function markLoaded(k){if(S.loaded.has(k))return;S.loaded.add(k);if(S.loaded.size===3)S.animate='load'}
 const REDUCED=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 function countUp(root){if(REDUCED)return;root.querySelectorAll('td.count').forEach((el,i)=>{const end=+el.textContent||0;if(!end)return;const t0=performance.now()+120+i*40,dur=650;el.textContent='0';const step=now=>{const k=Math.min(1,Math.max(0,(now-t0)/dur));el.textContent=Math.round(end*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
@@ -673,7 +683,8 @@ function renderStats(){
       return `<div class="stat next"><span class="k"><i class="live" aria-hidden="true"></i>Próxima salida</span><span class="v" title="${esc(pname(next.persona))}">${esc(fullShort(next.persona))}</span><span class="s">${fmt(next.inicio)} · <b>${when}</b></span></div>`})();
 }
 function renderFoot(){$('footRole').textContent=S.owner?`Sesión de aprobador${S.email?' · '+S.email:''}`:(S.code?'Acceso del equipo':'');$('loginBtn').textContent=S.owner?'Cerrar sesión':'Acceso del aprobador';$('codeBtn').hidden=S.owner||!S.code}
-function renderAll(){renderWho();renderFoot();$('ctaText').textContent=S.owner?'Registrar ausencia':'Solicitar vacaciones';renderStats();renderGrid();renderSum();renderQueue();renderMine();renderDetail();renderFest();renderCalc()}
+function renderAccess(){$('accessPanel').hidden=!S.owner}
+function renderAll(){renderWho();renderFoot();renderAccess();$('ctaText').textContent=S.owner?'Registrar ausencia':'Solicitar vacaciones';renderStats();renderGrid();renderSum();renderQueue();renderMine();renderDetail();renderFest();renderCalc()}
 function renderFest(){
   if(!S.owner){$('festPanel').hidden=true;return}$('festPanel').hidden=false;
   const list=[...S.fest].sort().filter(f=>f.startsWith(String(S.y)));
@@ -683,7 +694,7 @@ function renderFest(){
 /* ---------- data (Supabase) ---------- */
 const SUPABASE_URL='https://ervttlneimqjbyyzwoef.supabase.co';
 const SUPABASE_KEY='sb_publishable_L37v_9GQ4YhI9RnhTf06KQ_XNf-aCWb';
-const ERRS={codigo_invalido:'El código del equipo no es correcto.',persona_invalida:'Elige una persona del equipo.',cubre_invalido:'Elige a alguien del equipo para cubrir.',tipo_invalido:'Ese tipo de ausencia no se puede solicitar aquí.',referencia_invalida:'Esas vacaciones ya no existen; recarga la página.',fechas_invalidas:'Revisa las fechas (máximo 120 días por solicitud).',demasiadas_pendientes:'Hay demasiadas solicitudes pendientes de esa persona; espera a que se revisen.'};
+const ERRS={codigo_invalido:'El código del equipo no es correcto.',persona_invalida:'Elige una persona del equipo.',cubre_invalido:'Elige a alguien del equipo para cubrir.',tipo_invalido:'Ese tipo de ausencia no se puede solicitar aquí.',referencia_invalida:'Esas vacaciones ya no existen; recarga la página.',fechas_invalidas:'Revisa las fechas (máximo 120 días por solicitud).',demasiadas_pendientes:'Hay demasiadas solicitudes pendientes de esa persona; espera a que se revisen.',codigo_corto:'El código debe tener entre 6 y 64 caracteres.',no_autorizado:'Tu sesión no tiene permiso de aprobador.'};
 function errMsg(e,fallback){const m=(e&&(e.message||e.error_description))||'';for(const k in ERRS)if(m.includes(k))return ERRS[k];if(/Failed to fetch|NetworkError|network|Load failed/i.test(m))return'Sin conexión con la base de datos. Revisa tu red e intenta de nuevo.';return fallback}
 const nowIso=()=>new Date().toISOString();
 const must=r=>{if(r.error)throw r.error;return r.data};
@@ -723,16 +734,30 @@ async function tryCode(){
   catch(e){$('gateErr').textContent=errMsg(e,'No se pudo validar el código. Intenta de nuevo.')}
   finally{$('gateBtn').disabled=false}
 }
-function openLogin(){$('loginModal').hidden=false;$('loginErr').textContent='';setTimeout(()=>{try{$('lgEmail').focus()}catch(e){}},60)}
+function setLoginMode(signup){S.signup=!!signup;$('lgTitle').textContent=S.signup?'Crea tu acceso de aprobador':'Acceso del aprobador';$('lgHint').textContent=S.signup?'Solo la primera vez. Usa el correo registrado como aprobador y una contraseña de al menos 8 caracteres.':'Solo para aprobar, editar ausencias y administrar festivos.';$('lgPass2Wrap').hidden=!S.signup;$('lgPass').setAttribute('autocomplete',S.signup?'new-password':'current-password');$('lgBtn').textContent=S.signup?'Crear acceso':'Entrar';$('lgMode').textContent=S.signup?'Ya tengo contraseña':'¿Primera vez? Crea tu contraseña';$('loginErr').textContent=''}
+function openLogin(){setLoginMode(false);$('loginModal').hidden=false;$('loginErr').textContent='';setTimeout(()=>{try{$('lgEmail').focus()}catch(e){}},60)}
 function closeLogin(){$('loginModal').hidden=true}
 async function applySession(session){S.owner=!!session;S.email=(session&&session.user&&session.user.email)||'';S.edit=null;fillSelects();renderForm();renderAll()}
 async function doLogin(ev){
   ev.preventDefault();$('lgBtn').disabled=true;$('loginErr').textContent='';
+  const email=$('lgEmail').value.trim(),pass=$('lgPass').value;
   try{
-    const {data,error}=await S.sb.auth.signInWithPassword({email:$('lgEmail').value.trim(),password:$('lgPass').value});
+    if(S.signup){
+      if(pass.length<8)throw{message:'__short'};
+      if(pass!==$('lgPass2').value)throw{message:'__mismatch'};
+      const {data,error}=await S.sb.auth.signUp({email,password:pass});
+      if(error)throw error;
+      if(!data.session){$('loginErr').textContent='Revisa tu correo para confirmar tu acceso y después entra con tu contraseña.';return}
+      $('lgPass').value='';$('lgPass2').value='';closeLogin();hideGate();await applySession(data.session);await load();toast('Acceso creado. Ya eres el aprobador.');
+      return;
+    }
+    const {data,error}=await S.sb.auth.signInWithPassword({email,password:pass});
     if(error)throw error;
     $('lgPass').value='';closeLogin();hideGate();await applySession(data.session);await load();toast('Sesión de aprobador iniciada');
-  }catch(e){$('loginErr').textContent=/invalid/i.test((e&&e.message)||'')?'Correo o contraseña incorrectos.':errMsg(e,'No se pudo iniciar sesión.')}
+  }catch(e){
+    const m=(e&&e.message)||'';
+    $('loginErr').textContent=m==='__short'?'La contraseña debe tener al menos 8 caracteres.':m==='__mismatch'?'Las contraseñas no coinciden.':/not allowed|disabled/i.test(m)?'El registro del aprobador está cerrado. Usa "Ya tengo contraseña".':/already|registered|exists/i.test(m)?'Ese correo ya tiene acceso. Usa "Ya tengo contraseña".':/invalid/i.test(m)?'Correo o contraseña incorrectos.':errMsg(e,'No se pudo completar. Intenta de nuevo.');
+  }
   finally{$('lgBtn').disabled=false}
 }
 async function logout(){
@@ -783,6 +808,7 @@ document.addEventListener('click',async ev=>{
   if(b.id==='loginBtn'){if(S.owner)await logout();else openLogin();return}
   if(b.id==='gateLogin'){openLogin();return}
   if(b.id==='lgCancel'){closeLogin();return}
+  if(b.id==='lgMode'){setLoginMode(!S.signup);return}
   if(b.id==='codeBtn'){S.code='';lsDel('vt-codigo');S.apr=[];S.sol=[];renderAll();showGate();return}
   if(b.id==='d-close'){S.sel=null;renderDetail();return}
   if(ds.apr){S.sel={apr:ds.apr};renderDetail();$('detail').scrollIntoView({block:'nearest',behavior:'smooth'});return}
@@ -801,6 +827,14 @@ document.addEventListener('click',async ev=>{
 $('form').addEventListener('submit',submitForm);
 $('gateForm').addEventListener('submit',e=>{e.preventDefault();tryCode()});
 $('loginForm').addEventListener('submit',doLogin);
+$('codeForm').addEventListener('submit',async e=>{
+  e.preventDefault();const v=$('newCode').value.trim();
+  if(v.length<6){toast(ERRS.codigo_corto);return}
+  $('codeSave').disabled=true;
+  try{must(await S.sb.rpc('vt_cambiar_codigo',{p_codigo:v}));S.code=v;lsSet('vt-codigo',v);$('newCode').value='';renderFoot();toast('Código del equipo actualizado')}
+  catch(err){toast(errMsg(err,'No se pudo guardar el código'))}
+  finally{$('codeSave').disabled=false}
+});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('loginModal').hidden)closeLogin()});
 for(const id of ['f-inicio','f-fin','f-persona'])$(id).addEventListener('change',()=>{if(id==='f-inicio'&&!$('f-fin').value)$('f-fin').value=$('f-inicio').value;if(id==='f-persona'){lsSet('vt-persona',$('f-persona').value);renderMine()}renderCalc()});
 
